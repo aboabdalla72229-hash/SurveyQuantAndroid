@@ -1,0 +1,58 @@
+name: Build SurveyQuant APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download project ZIP
+        run: |
+          mkdir -p project
+          curl -L \
+            "https://github.com/aboabdalla72229-hash/SurveyQuantAndroid/raw/main/SurveyQuantAndroid_V33_RAILWAY_PAYMENT_READY.zip" \
+            -o project.zip
+          unzip -q project.zip -d project
+
+      - name: Find Android project
+        run: |
+          echo "Searching for Gradle project..."
+          find project -name settings.gradle -o -name settings.gradle.kts
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK 33
+        run: |
+          sdkmanager "platforms;android-33" "build-tools;33.0.2"
+
+      - name: Build APK
+        run: |
+          PROJECT_DIR=$(dirname "$(find project -name settings.gradle -o -name settings.gradle.kts | head -1)")
+          cd "$PROJECT_DIR"
+
+          chmod +x gradlew 2>/dev/null || true
+
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SurveyQuant-V33-APK
+          path: |
+            project/**/build/outputs/apk/debug/*.apk
